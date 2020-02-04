@@ -6,9 +6,12 @@
 #include "afxwin.h"
 #include "afxdialogex.h"
 #include <fstream>
+#include "tinyosc.h"
 using namespace std;
 
-
+#define OSC_BUFFER_SIZE 2048
+#define OSC_PORT 7000
+#define OSC_ADDRESS "127.0.0.1"
 #define WM_UPDATE_MESSAGE (WM_USER+200)
 // Cdemo_MFCDlg dialog
 class Cdemo_MFCDlg : public CDialogEx
@@ -24,6 +27,8 @@ public:
     // Dialog Data
     enum { IDD = IDD_DEMO_MFC_DIALOG };
     ofstream fout;
+
+    //OutboundPacketStream oscStream;
 protected:
     virtual void DoDataExchange(CDataExchange* pDX); // DDX/DDV support
     static void __stdcall bvhFrameDataReceived(void* customedObj, SOCKET_REF sender, BvhDataHeader* header,
@@ -38,6 +43,7 @@ protected:
     SOCKET_REF sockUDPRef;
     void showBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data);
     void saveBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data);
+    void sendBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data);
     void showCalcBoneInfo(SOCKET_REF sender, CalcDataHeader* header, float* data);
     // Generated message map functions
     virtual BOOL OnInitDialog();
