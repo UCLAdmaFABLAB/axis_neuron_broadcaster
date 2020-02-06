@@ -97,11 +97,11 @@ Cdemo_MFCDlg::Cdemo_MFCDlg(CWnd* pParent /*=NULL*/)
 	udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
 	TRACE("made socket. result: %d\n", udpSocket);
 	
-	//char broadcast = '1';
-	//if (setsockopt(udpSocket, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast)) < 0) {
-	//	TRACE("Error in setting Broadcast option");
-	//	closesocket(udpSocket);
-	//}
+	char broadcast = '1';
+	if (setsockopt(udpSocket, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast)) < 0) {
+		TRACE("Error in setting Broadcast option");
+		closesocket(udpSocket);
+	}
 
 	sock_addr.sin_family = AF_INET;
 	hostent* localHost = gethostbyname("");
@@ -109,14 +109,7 @@ Cdemo_MFCDlg::Cdemo_MFCDlg(CWnd* pParent /*=NULL*/)
 	char* localIP = inet_ntoa(*(struct in_addr*) * localHost->h_addr_list);
 	TRACE("localIP: %s", localIP);
 	sock_addr.sin_port = htons(OSC_PORT);
-	sock_addr.sin_addr.s_addr = inet_addr(localIP);
-	if (bind(udpSocket, (struct sockaddr*) &sock_addr, sizeof(sock_addr)) == -1) {
-		TRACE("bind failure. error: %d,\n", WSAGetLastError());
-	}
-
-	//if (connect(udpSocket, (struct sockaddr*) &sock_addr, sizeof(sock_addr)) == -1) {
-	//	TRACE("connect failure. error: %d,\n", WSAGetLastError());
-	//}
+	sock_addr.sin_addr.s_addr = inet_addr("255.255.255.255");
 
 	int len = tosc_writeMessage(oscBuffer, bufSize, "/mocap", "s", "hello world");
 	if (sendto(udpSocket, oscBuffer, len, 0, (struct sockaddr*) &sock_addr, sizeof(sock_addr)) == -1) {
@@ -126,20 +119,10 @@ Cdemo_MFCDlg::Cdemo_MFCDlg(CWnd* pParent /*=NULL*/)
 
 void Cdemo_MFCDlg::sendBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data) {
 
-	int len = tosc_writeMessage(oscBuffer, bufSize, "/mocap", "s", "hello world");
-	fd_set readSet;
-	FD_ZERO(&readSet);
-	FD_SET(udpSocket, &readSet);
-	struct timeval timeout = { 1, 0 }; // select times out after 1 second
-	if (select(udpSocket + 1, &readSet, NULL, NULL, &timeout) > 0) {
-		if (sendto(udpSocket, oscBuffer, len, 0, (struct sockaddr*) & sock_addr, sizeof(sock_addr)) == -1) {
-			TRACE("send failure. error: %d,\n", WSAGetLastError());
-		}
-		TRACE("Sent data\n");
-	} else {
-		TRACE("Could not select socket \n");
+	int len = tosc_writeMessage(oscBuffer, bufSize, "/mocap", "s", "hello");
+	if (sendto(udpSocket, oscBuffer, len, 0, (struct sockaddr*) & sock_addr, sizeof(sock_addr)) == -1) {
+		TRACE("send failure. error: %d,\n", WSAGetLastError());
 	}
-
 }
 void Cdemo_MFCDlg::DoDataExchange(CDataExchange* pDX)
 {
