@@ -10,8 +10,7 @@
 using namespace std;
 
 #define OSC_BUFFER_SIZE 2048
-#define OSC_PORT 7000
-#define OSC_ADDRESS "127.0.0.1"
+#define OSC_PORT 8000
 #define WM_UPDATE_MESSAGE (WM_USER+200)
 // Cdemo_MFCDlg dialog
 class Cdemo_MFCDlg : public CDialogEx
