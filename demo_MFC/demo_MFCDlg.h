@@ -9,7 +9,18 @@
 #include "tinyosc.h"
 using namespace std;
 
-#define OSC_BUFFER_SIZE 2048
+struct mocap_bone_t {
+    int frameIndex;
+    int sensor;
+    float dispX;
+    float dispY;
+    float dispZ;
+    float angX;
+    float angY;
+    float angZ;
+};
+
+#define OSC_BUFFER_SIZE 4096
 #define OSC_PORT 8000
 #define WM_UPDATE_MESSAGE (WM_USER+200)
 // Cdemo_MFCDlg dialog
@@ -26,6 +37,7 @@ public:
     // Dialog Data
     enum { IDD = IDD_DEMO_MFC_DIALOG };
     ofstream fout;
+    mocap_bone_t* curFrame;
 
     //OutboundPacketStream oscStream;
 protected:
@@ -40,9 +52,9 @@ protected:
     HICON m_hIcon;
     SOCKET_REF sockTCPRef;
     SOCKET_REF sockUDPRef;
-    void showBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data);
-    void saveBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data);
-    void sendBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data);
+    void getBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data);
+    void showBvhBoneInfo();
+    void sendBvhBoneInfo();
     void showCalcBoneInfo(SOCKET_REF sender, CalcDataHeader* header, float* data);
     // Generated message map functions
     virtual BOOL OnInitDialog();

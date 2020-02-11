@@ -90,6 +90,7 @@ Cdemo_MFCDlg::Cdemo_MFCDlg(CWnd* pParent /*=NULL*/)
 	sockTCPRef = NULL;
 	sockUDPRef = NULL;
 	fout = ofstream("neurondata.txt");
+	curFrame = new mocap_bone_t[BVHBoneCount];
 
 	if (WSAStartup(MAKEWORD(1, 1), &wsaData) == SOCKET_ERROR) {
 		TRACE("Error initialising WSA.\n");
@@ -117,13 +118,7 @@ Cdemo_MFCDlg::Cdemo_MFCDlg(CWnd* pParent /*=NULL*/)
 	}
 }
 
-void Cdemo_MFCDlg::sendBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data) {
 
-	int len = tosc_writeMessage(oscBuffer, bufSize, "/mocap", "s", "hello");
-	if (sendto(udpSocket, oscBuffer, len, 0, (struct sockaddr*) & sock_addr, sizeof(sock_addr)) == -1) {
-		TRACE("send failure. error: %d,\n", WSAGetLastError());
-	}
-}
 void Cdemo_MFCDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
@@ -208,9 +203,9 @@ void __stdcall Cdemo_MFCDlg::bvhFrameDataReceived(void* customedObj, SOCKET_REF 
 	header, float* data)
 {
 	Cdemo_MFCDlg* pthis = (Cdemo_MFCDlg*)customedObj;
-	pthis->showBvhBoneInfo(sender, header, data);
-	pthis->saveBvhBoneInfo(sender, header, data);
-	pthis->sendBvhBoneInfo(sender, header, data);
+	pthis->getBvhBoneInfo(sender, header, data);
+	pthis->showBvhBoneInfo();
+	pthis->sendBvhBoneInfo();
 }
 void __stdcall Cdemo_MFCDlg::CalcFrameDataReceive(void* customObje, SOCKET_REF sender, CalcDataHeader*
 	header, float* data)
@@ -219,15 +214,12 @@ void __stdcall Cdemo_MFCDlg::CalcFrameDataReceive(void* customObje, SOCKET_REF s
 	pthis->showCalcBoneInfo(sender, header, data);
 
 }
-void Cdemo_MFCDlg::saveBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data)
-{
-	char strFrameIndex[60];
-	_itoa_s(header->FrameIndex, strFrameIndex, 10);
-
+void Cdemo_MFCDlg::getBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data) {
+	mocap_bone_t* boneData;
 	for (int curSel = 0; curSel < BVHBoneCount; curSel++) {
+		boneData = &curFrame[curSel];
 		int dataIndex = 0;
-
-		fout << strFrameIndex << "," << curSel << ",";
+		boneData->frameIndex = header->FrameIndex;
 		if (curSel == CB_ERR) return;
 		if (header->WithDisp)
 		{
@@ -236,40 +228,29 @@ void Cdemo_MFCDlg::saveBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, flo
 			{
 				dataIndex += 6;
 			}
-			float dispX = data[dataIndex + 0];
-			float dispY = data[dataIndex + 1];
-			float dispZ = data[dataIndex + 2];
-			fout << dispX << "," << dispY << "," << dispZ << ",";
-
-			float angX = data[dataIndex + 4];
-			float angY = data[dataIndex + 3];
-			float angZ = data[dataIndex + 5];
-			fout << angX << "," << angY << "," << angZ << ",";
-
-			fout << "\n";
+			boneData->dispX = data[dataIndex + 0];
+			boneData->dispY = data[dataIndex + 1];
+			boneData->dispZ = data[dataIndex + 2];
+			boneData->angX = data[dataIndex + 4];
+			boneData->angY = data[dataIndex + 3];
+			boneData->angZ = data[dataIndex + 5];
 		}
 		else
 		{
 			if (curSel == 0)
 			{
 				dataIndex = 0;
-				fout << strFrameIndex << "," << curSel << ",";
-
 				if (header->WithReference)
 				{
 					dataIndex += 6;
 				}
 				// show hip's displacement
-
-				float dispX = data[dataIndex + 0];
-				float dispY = data[dataIndex + 1];
-				float dispZ = data[dataIndex + 2];
-				fout << dispX << "," << dispY << "," << dispZ << ",";
-
-				float angX = data[dataIndex + 4];
-				float angY = data[dataIndex + 3];
-				float angZ = data[dataIndex + 5];
-				fout << angX << "," << angY << "," << angZ << ",";
+				boneData->dispX = data[dataIndex + 0];
+				boneData->dispY = data[dataIndex + 1];
+				boneData->dispZ = data[dataIndex + 2];
+				boneData->angX = data[dataIndex + 4];
+				boneData->angY = data[dataIndex + 3];
+				boneData->angZ = data[dataIndex + 5];
 			}
 			else
 			{
@@ -278,115 +259,69 @@ void Cdemo_MFCDlg::saveBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, flo
 				{
 					dataIndex += 6;
 				}
-				fout << strFrameIndex << "," << curSel << ",";
-
-				// show displacement
-				fout << ",,,";
-
-				// show angle
-				float angX = data[dataIndex + 1];
-				float angY = data[dataIndex + 0];
-				float angZ = data[dataIndex + 2];
-				fout << angX << "," << angY << "," << angZ << ",";
+				boneData->dispX = NULL;
+				boneData->dispY = NULL;
+				boneData->dispZ = NULL;
+				boneData->angX = data[dataIndex + 1];
+				boneData->angY = data[dataIndex + 0];
+				boneData->angZ = data[dataIndex + 2];
 			}
 		}
 	}
+
 }
-void Cdemo_MFCDlg::showBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data)
+void Cdemo_MFCDlg::showBvhBoneInfo()
 {
 	USES_CONVERSION;
 	// show frame index
-	char strFrameIndex[60];
-	_itoa_s(header->FrameIndex, strFrameIndex, 10);
-	GetDlgItem(IDC_STATIC_FRAME_INDEX)->SetWindowText(A2W(strFrameIndex));
+
 	// calculate data index for selected bone
 	int dataIndex = 0;
 	int curSel = m_wndComBoxBone.GetCurSel();
 	if (curSel == CB_ERR) return;
-	if (header->WithDisp)
-	{
-		dataIndex = curSel * 6;
-		if (header->WithReference)
-		{
-			dataIndex += 6;
-		}
-		float dispX = data[dataIndex + 0];
-		float dispY = data[dataIndex + 1];
-		float dispZ = data[dataIndex + 2];
-		char strBuff[32];
-		sprintf_s(strBuff, sizeof(strBuff), "%0.3f", dispX);
-		GetDlgItem(IDC_STATIC_DISP_X)->SetWindowText(A2W(strBuff));
-		sprintf_s(strBuff, sizeof(strBuff), "%0.3f", dispY);
-		GetDlgItem(IDC_STATIC_DISP_Y)->SetWindowText(A2W(strBuff));
-		sprintf_s(strBuff, sizeof(strBuff), "%0.3f", dispZ);
-		GetDlgItem(IDC_STATIC_DISP_Z)->SetWindowText(A2W(strBuff));
-		float angX = data[dataIndex + 4];
-		float angY = data[dataIndex + 3];
-		float angZ = data[dataIndex + 5];
-		sprintf_s(strBuff, sizeof(strBuff), "%0.3f", angX);
-		GetDlgItem(IDC_STATIC_ANGLE_X)->SetWindowText(A2W(strBuff));
-		sprintf_s(strBuff, sizeof(strBuff), "%0.3f", angY);
-		GetDlgItem(IDC_STATIC_ANGLE_Y)->SetWindowText(A2W(strBuff));
-		sprintf_s(strBuff, sizeof(strBuff), "%0.3f", angZ);
-		GetDlgItem(IDC_STATIC_ANGLE_Z)->SetWindowText(A2W(strBuff));
-	}
-	else
-	{
-		if (curSel == 0)
-		{
-			dataIndex = 0;
-			if (header->WithReference)
-			{
-				dataIndex += 6;
-			}
-			// show hip's displacement
-			float dispX = data[dataIndex + 0];
-			float dispY = data[dataIndex + 1];
-			float dispZ = data[dataIndex + 2];
-			char strBuff[32];
-			sprintf_s(strBuff, sizeof(strBuff), "%0.3f", dispX);
-			GetDlgItem(IDC_STATIC_DISP_X)->SetWindowText(A2W(strBuff));
-			sprintf_s(strBuff, sizeof(strBuff), "%0.3f", dispY);
-			GetDlgItem(IDC_STATIC_DISP_Y)->SetWindowText(A2W(strBuff));
-			sprintf_s(strBuff, sizeof(strBuff), "%0.3f", dispZ);
-			GetDlgItem(IDC_STATIC_DISP_Z)->SetWindowText(A2W(strBuff));
-			// show hip's angle
-			float angX = data[dataIndex + 4];
-			float angY = data[dataIndex + 3];
-			float angZ = data[dataIndex + 5];
-			sprintf_s(strBuff, sizeof(strBuff), "%0.3f", angX);
-			//GetDlgItem(IDC_STATIC_ANGLE_X)->SetWindowText(A2W(strBuff));
-			sprintf_s(strBuff, sizeof(strBuff), "%0.3f", angY);
-			//GetDlgItem(IDC_STATIC_ANGLE_Y)->SetWindowText(A2W(strBuff));
-			sprintf_s(strBuff, sizeof(strBuff), "%0.3f", angZ);
-			//GetDlgItem(IDC_STATIC_ANGLE_Z)->SetWindowText(A2W(strBuff));
-		}
-		else
-		{
-			dataIndex = 3 + curSel * 3;
-			if (header->WithReference)
-			{
-				dataIndex += 6;
-			}
-			// show displacement
-			char strBuff[32];
-			sprintf_s(strBuff, sizeof(strBuff), "NaN");
-			GetDlgItem(IDC_STATIC_DISP_X)->SetWindowText(A2W(strBuff));
-			GetDlgItem(IDC_STATIC_DISP_Y)->SetWindowText(A2W(strBuff));
-			GetDlgItem(IDC_STATIC_DISP_Z)->SetWindowText(A2W(strBuff));
-			// show angle
-			float angX = data[dataIndex + 1];
-			float angY = data[dataIndex + 0];
-			float angZ = data[dataIndex + 2];
-			sprintf_s(strBuff, sizeof(strBuff), "%0.3f", angX);
-			GetDlgItem(IDC_STATIC_ANGLE_X)->SetWindowText(A2W(strBuff));
-			sprintf_s(strBuff, sizeof(strBuff), "%0.3f", angY);
-			GetDlgItem(IDC_STATIC_ANGLE_Y)->SetWindowText(A2W(strBuff));
-			sprintf_s(strBuff, sizeof(strBuff), "%0.3f", angZ);
-			GetDlgItem(IDC_STATIC_ANGLE_Z)->SetWindowText(A2W(strBuff));
+	mocap_bone_t* cur = &curFrame[curSel];
+	char strFrameIndex[60];
+	_itoa_s(cur->frameIndex, strFrameIndex, 10);
+	GetDlgItem(IDC_STATIC_FRAME_INDEX)->SetWindowText(A2W(strFrameIndex));
+	dataIndex = curSel * 6;
+	char strBuff[32];
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->dispX);
+	GetDlgItem(IDC_STATIC_DISP_X)->SetWindowText(A2W(strBuff));
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->dispY);
+	GetDlgItem(IDC_STATIC_DISP_Y)->SetWindowText(A2W(strBuff));
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->dispZ);
+	GetDlgItem(IDC_STATIC_DISP_Z)->SetWindowText(A2W(strBuff));
+
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->angX);
+	GetDlgItem(IDC_STATIC_ANGLE_X)->SetWindowText(A2W(strBuff));
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->angY);
+	GetDlgItem(IDC_STATIC_ANGLE_Y)->SetWindowText(A2W(strBuff));
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->angZ);
+	GetDlgItem(IDC_STATIC_ANGLE_Z)->SetWindowText(A2W(strBuff));
+	
+}
+
+void Cdemo_MFCDlg::sendBvhBoneInfo() {
+	tosc_bundle bundle;
+	uint64_t timetag = time(NULL);
+	const uint8_t addressSize = 128;
+	char addressBuf[addressSize];
+	mocap_bone_t* cur;
+	for (int boneIndex = 0; boneIndex < BVHBoneCount; boneIndex++) {
+		cur = &curFrame[boneIndex];
+		tosc_writeBundle(&bundle, timetag, oscBuffer, OSC_BUFFER_SIZE);
+		sprintf_s(addressBuf, addressSize, "/mocap/bone/%d/frame", boneIndex);
+		tosc_writeNextMessage(&bundle, addressBuf, "i", cur->frameIndex);
+		sprintf_s(addressBuf, addressSize, "/mocap/bone/%d/disp", boneIndex);
+		tosc_writeNextMessage(&bundle, addressBuf, "fff", cur->dispX, cur->dispY, cur->dispZ);
+		sprintf_s(addressBuf, addressSize, "/mocap/bone/%d/ang", boneIndex);
+		tosc_writeNextMessage(&bundle, addressBuf, "fff", cur->angX, cur->angY, cur->angZ);
+		if (sendto(udpSocket, oscBuffer, tosc_getBundleLength(&bundle), 0, (struct sockaddr*) & sock_addr, sizeof(sock_addr)) == -1) {
+			TRACE("send failure. error: %d,\n", WSAGetLastError());
 		}
 	}
 }
+
 LRESULT Cdemo_MFCDlg::OnUpdateMessage(WPARAM wParam, LPARAM lParam)
 {
 	UpdateData(FALSE);
