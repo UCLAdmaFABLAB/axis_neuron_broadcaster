@@ -302,21 +302,27 @@ void Cdemo_MFCDlg::showBvhBoneInfo()
 }
 
 void Cdemo_MFCDlg::sendBvhBoneInfo() {
-	tosc_bundle bundle;
-	uint64_t timetag = time(NULL);
-	const uint8_t addressSize = 128;
+	const uint16_t addressSize = 256;
 	char addressBuf[addressSize];
+	int len;
 	mocap_bone_t* cur;
 	for (int boneIndex = 0; boneIndex < BVHBoneCount; boneIndex++) {
 		cur = &curFrame[boneIndex];
-		tosc_writeBundle(&bundle, timetag, oscBuffer, OSC_BUFFER_SIZE);
-		sprintf_s(addressBuf, addressSize, "/mocap/bone/%d/frame", boneIndex);
-		tosc_writeNextMessage(&bundle, addressBuf, "i", cur->frameIndex);
-		sprintf_s(addressBuf, addressSize, "/mocap/bone/%d/disp", boneIndex);
-		tosc_writeNextMessage(&bundle, addressBuf, "fff", cur->dispX, cur->dispY, cur->dispZ);
-		sprintf_s(addressBuf, addressSize, "/mocap/bone/%d/ang", boneIndex);
-		tosc_writeNextMessage(&bundle, addressBuf, "fff", cur->angX, cur->angY, cur->angZ);
-		if (sendto(udpSocket, oscBuffer, tosc_getBundleLength(&bundle), 0, (struct sockaddr*) & sock_addr, sizeof(sock_addr)) == -1) {
+		sprintf_s(addressBuf, addressSize, "/b/%d/f", boneIndex);
+		len = tosc_writeMessage(oscBuffer, OSC_BUFFER_SIZE, addressBuf, "i", cur->frameIndex);
+		if (sendto(udpSocket, oscBuffer, len, 0, (struct sockaddr*) & sock_addr, sizeof(sock_addr)) == -1) {
+			TRACE("send failure. error: %d,\n", WSAGetLastError());
+		}
+		
+		sprintf_s(addressBuf, addressSize, "/b/%d/d", boneIndex);
+		len = tosc_writeMessage(oscBuffer, OSC_BUFFER_SIZE, addressBuf, "fff", cur->dispX, cur->dispY, cur->dispZ);
+		if (sendto(udpSocket, oscBuffer, len, 0, (struct sockaddr*) & sock_addr, sizeof(sock_addr)) == -1) {
+			TRACE("send failure. error: %d,\n", WSAGetLastError());
+		}
+
+		sprintf_s(addressBuf, addressSize, "/b/%d/a", boneIndex);
+		len = tosc_writeMessage(oscBuffer, OSC_BUFFER_SIZE, addressBuf, "fff", cur->angX, cur->angY, cur->angZ);
+		if (sendto(udpSocket, oscBuffer, len, 0, (struct sockaddr*) & sock_addr, sizeof(sock_addr)) == -1) {
 			TRACE("send failure. error: %d,\n", WSAGetLastError());
 		}
 	}
