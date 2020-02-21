@@ -18,6 +18,22 @@ struct mocap_bone_t {
     float angX;
     float angY;
     float angZ;
+    float calcAx;
+    float calcAy;
+    float calcAz;
+    float calcPx;
+    float calcPy;
+    float calcPz;
+    float calcVx;
+    float calcVy;
+    float calcVz;
+    float calcQs;
+    float calcQx;
+    float calcQy;
+    float calcQz;
+    float calcGx;
+    float calcGy;
+    float calcGz;
 };
 
 #define OSC_BUFFER_SIZE 4096
@@ -51,11 +67,15 @@ protected:
 protected:
     HICON m_hIcon;
     SOCKET_REF sockTCPRef;
+    SOCKET_REF sockTCPCalc;
     SOCKET_REF sockUDPRef;
+    void sendOscBuffer(char* buf, int len);
     void getBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, float* data);
     void showBvhBoneInfo();
     void sendBvhBoneInfo();
-    void showCalcBoneInfo(SOCKET_REF sender, CalcDataHeader* header, float* data);
+    void showCalcBoneInfo();
+    void getCalcBoneInfo(SOCKET_REF sender, CalcDataHeader* header, float* data);
+    void sendCalcBoneInfo();
     // Generated message map functions
     virtual BOOL OnInitDialog();
     afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
@@ -67,6 +87,7 @@ public:
     CComboBox m_wndComBoxBone;
     CString m_strIPAddress;
     CString m_strPort;
+    CString m_strPortCalc;
     CString m_strUDPPort;
     afx_msg void OnBnClickedOk();
     afx_msg void OnBnClickedCancel();
@@ -77,7 +98,7 @@ public:
     afx_msg void OnBnClickedRadio();
     void UpdateBvhDataShowUI();
     void UpdateCalcDataShowUI();
-    CString m_clacAx;
+    CString m_calcAx;
     CString m_calcAy;
     CString m_calcAz;
     CString m_calcGx;
@@ -95,4 +116,7 @@ public:
     CString m_calcPz;
     CString m_bvhAngleZ;
     afx_msg void OnStnClickedStaticDispX();
+    afx_msg void OnStnClickedStaticPx2();
+    afx_msg void OnBnClickedButtonTcpConnection2();
+    afx_msg void OnBnClickedButtonTcpConnectionCalc();
 };
