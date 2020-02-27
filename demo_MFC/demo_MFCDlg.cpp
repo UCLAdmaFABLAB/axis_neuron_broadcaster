@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <ctime>
 
 #include "tinyosc.h"
 
@@ -33,6 +34,8 @@ char oscBufferCalc[OSC_BUFFER_SIZE];
 struct sockaddr_in sock_addr;
 SOCKET udpSocket;
 WSADATA wsaData;
+const double dataDelayS = 0.5;
+std::time_t lastDataSent = std::time(nullptr);
 
 // CAboutDlg dialog used for App About
 class CAboutDlg : public CDialogEx
@@ -275,9 +278,9 @@ void Cdemo_MFCDlg::getBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, floa
 				boneData->dispX = NULL;
 				boneData->dispY = NULL;
 				boneData->dispZ = NULL;
-				boneData->angX = data[dataIndex + 1];
-				boneData->angY = data[dataIndex + 0];
-				boneData->angZ = data[dataIndex + 2];
+boneData->angX = data[dataIndex + 1];
+boneData->angY = data[dataIndex + 0];
+boneData->angZ = data[dataIndex + 2];
 			}
 		}
 	}
@@ -304,7 +307,7 @@ void Cdemo_MFCDlg::showBvhBoneInfo()
 	GetDlgItem(IDC_STATIC_DISP_Y)->SetWindowText(A2W(strBuff));
 	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->dispZ);
 	GetDlgItem(IDC_STATIC_DISP_Z)->SetWindowText(A2W(strBuff));
-	
+
 	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->angX);
 	GetDlgItem(IDC_STATIC_ANGLE_X)->SetWindowText(A2W(strBuff));
 	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->angY);
@@ -327,7 +330,7 @@ void Cdemo_MFCDlg::sendBvhBoneInfo() {
 		sprintf_s(addressBuf, addressSize, "/b/%d/f", boneIndex);
 		len = tosc_writeMessage(oscBuffer, OSC_BUFFER_SIZE, addressBuf, "i", cur->frameIndex);
 		sendOscBuffer(oscBuffer, len);
-		
+
 		sprintf_s(addressBuf, addressSize, "/b/%d/d", boneIndex);
 		len = tosc_writeMessage(oscBuffer, OSC_BUFFER_SIZE, addressBuf, "fff", cur->dispX, cur->dispY, cur->dispZ);
 		sendOscBuffer(oscBuffer, len);
@@ -345,7 +348,7 @@ LRESULT Cdemo_MFCDlg::OnUpdateMessage(WPARAM wParam, LPARAM lParam)
 }
 void Cdemo_MFCDlg::getCalcBoneInfo(SOCKET_REF sender, CalcDataHeader* header, float* data)
 {
-	
+
 	mocap_bone_t* boneData;
 	for (int curSel = 0; curSel < CalcBoneCount; curSel++) {
 		boneData = &curFrame[curSel];
@@ -371,17 +374,23 @@ void Cdemo_MFCDlg::getCalcBoneInfo(SOCKET_REF sender, CalcDataHeader* header, fl
 	}
 }
 void Cdemo_MFCDlg::sendCalcBoneInfo() {
+	if ((double) (std::time(nullptr) - lastDataSent) < dataDelayS) {
+		return;
+	} else {
+		lastDataSent = std::time(nullptr);
+	}
 	const uint16_t addressSize = 256;
 	char addressBuf[addressSize];
 	int len;
 	mocap_bone_t* cur;
+	
 	for (int boneIndex = 0; boneIndex < CalcBoneCount; boneIndex++) {
 		cur = &curFrame[boneIndex];
-
+		
 		sprintf_s(addressBuf, addressSize, "/b/%d/p", boneIndex);
 		len = tosc_writeMessage(oscBufferCalc, OSC_BUFFER_SIZE, addressBuf, "fff", cur->calcPx, cur->calcPy, cur->calcPz);
 		sendOscBuffer(oscBufferCalc, len);
-
+		/*
 		sprintf_s(addressBuf, addressSize, "/b/%d/v", boneIndex);
 		len = tosc_writeMessage(oscBufferCalc, OSC_BUFFER_SIZE, addressBuf, "fff", cur->calcVx, cur->calcVy, cur->calcVz);
 		sendOscBuffer(oscBufferCalc, len);
@@ -389,6 +398,7 @@ void Cdemo_MFCDlg::sendCalcBoneInfo() {
 		sprintf_s(addressBuf, addressSize, "/b/%d/A", boneIndex);
 		len = tosc_writeMessage(oscBufferCalc, OSC_BUFFER_SIZE, addressBuf, "fff", cur->calcAx, cur->calcAy, cur->calcAz);
 		sendOscBuffer(oscBufferCalc, len);
+		*/
 	}
 }
 void Cdemo_MFCDlg::showCalcBoneInfo()
