@@ -8,7 +8,7 @@ This tool was designed to consume data sent by the Axis Neuron Studio software a
 
 ### Installation
 
-The x64 binary is available [here](/UCLAdmaFABLAB/axis_neuron_broadcaster/archive/0.1.zip).
+The x64 binary is available [here](https://github.com/ucladmafablab/axis_neuron_broadcaster/archive/0.1.1.zip).
 
 To build this software, you will need Visual Studio 2019 with the C++ MFC v142 toolset. You will also need to add the included NDRLib Directory to *Additional Include Directories*.
 
