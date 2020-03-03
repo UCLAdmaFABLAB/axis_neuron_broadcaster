@@ -12,11 +12,8 @@
 #define IDC_STATIC_DISP_Y               1003
 #define IDC_STATIC_DISP_Z               1004
 #define IDC_COMBO_SELECTION_BONE_INDEX  1005
-#define IDC_RADIO_BVH                   1006
-#define IDC_RADIO_CALC                  1007
 #define IDC_BUTTON1                     1008
 #define IDC_BUTTON_TCP_CONNECTION       1008
-#define IDC_BUTTON_UDP_CONNECTION       1009
 #define IDC_STATIC_ANGLE_X              1010
 #define IDC_STATIC_ANGLE_Y              1011
 #define IDC_STATIC_ANGLE_Z              1012
@@ -24,7 +21,6 @@
 #define IDC_TEXT1                       1014
 #define IDC_TEXT2                       1015
 #define IDC_TEXT3                       1016
-#define IDC_UDP                         1016
 #define IDC_STATIC_PY                   1017
 #define IDC_STATIC_PZ                   1018
 #define IDC_STATIC_AX                   1019

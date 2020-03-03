@@ -6,6 +6,7 @@
 #include "afxwin.h"
 #include "afxdialogex.h"
 #include <fstream>
+#include <ctime>
 #include "tinyosc.h"
 using namespace std;
 
@@ -54,8 +55,10 @@ public:
     enum { IDD = IDD_DEMO_MFC_DIALOG };
     ofstream fout;
     mocap_bone_t* curFrame;
+    const double dataDelayS = 0.5;
+    std::time_t lastCalcDataSent = std::time(nullptr);
+    std::time_t lastBvhDataSent = std::time(nullptr);
 
-    //OutboundPacketStream oscStream;
 protected:
     virtual void DoDataExchange(CDataExchange* pDX); // DDX/DDV support
     static void __stdcall bvhFrameDataReceived(void* customedObj, SOCKET_REF sender, BvhDataHeader* header,
@@ -88,35 +91,9 @@ public:
     CString m_strIPAddress;
     CString m_strPort;
     CString m_strPortCalc;
-    CString m_strUDPPort;
-    afx_msg void OnBnClickedOk();
-    afx_msg void OnBnClickedCancel();
     afx_msg void OnBnClickedButtonTcpConnection();
-    afx_msg void OnBnClickedButtonUdpConnection();
+    afx_msg void OnBnClickedButtonTcpConnectionCalc();
     afx_msg void OnCbnSelchangeComboSelectionBoneIndex();
-    CButton m_radioBvh;
-    afx_msg void OnBnClickedRadio();
     void UpdateBvhDataShowUI();
     void UpdateCalcDataShowUI();
-    CString m_calcAx;
-    CString m_calcAy;
-    CString m_calcAz;
-    CString m_calcGx;
-    CString m_calcGy;
-    CString m_calcGz;
-    CString m_calcPx;
-    CString m_calcPy;
-    CString m_calcQs;
-    CString m_calcQx;
-    CString m_calcQy;
-    CString m_calcQz;
-    CString m_calcVx;
-    CString m_calcVy;
-    CString m_calcVz;
-    CString m_calcPz;
-    CString m_bvhAngleZ;
-    afx_msg void OnStnClickedStaticDispX();
-    afx_msg void OnStnClickedStaticPx2();
-    afx_msg void OnBnClickedButtonTcpConnection2();
-    afx_msg void OnBnClickedButtonTcpConnectionCalc();
 };

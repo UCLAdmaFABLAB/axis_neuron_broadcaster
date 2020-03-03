@@ -34,8 +34,7 @@ char oscBufferCalc[OSC_BUFFER_SIZE];
 struct sockaddr_in sock_addr;
 SOCKET udpSocket;
 WSADATA wsaData;
-const double dataDelayS = 0.5;
-std::time_t lastDataSent = std::time(nullptr);
+
 
 // CAboutDlg dialog used for App About
 class CAboutDlg : public CDialogEx
@@ -66,30 +65,6 @@ Cdemo_MFCDlg::Cdemo_MFCDlg(CWnd* pParent /*=NULL*/)
 	, m_strIPAddress(_T(""))
 	, m_strPort(_T(""))
 	, m_strPortCalc(_T(""))
-	, m_strUDPPort(_T(""))
-	// Calc data
-	, m_calcPx(_T(""))
-	, m_calcPy(_T(""))
-	, m_calcPz(_T(""))
-
-	, m_calcVx(_T(""))
-	, m_calcVy(_T(""))
-	, m_calcVz(_T(""))
-
-	, m_calcQs(_T(""))
-	, m_calcQx(_T(""))
-	, m_calcQy(_T(""))
-	, m_calcQz(_T(""))
-
-	, m_calcAx(_T(""))
-	, m_calcAy(_T(""))
-	, m_calcAz(_T(""))
-
-	, m_calcGx(_T(""))
-	, m_calcGy(_T(""))
-	, m_calcGz(_T(""))
-
-	, m_bvhAngleZ(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	sockTCPRef = NULL;
@@ -130,47 +105,18 @@ void Cdemo_MFCDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_TEXT1, m_strIPAddress);
 	DDX_Text(pDX, IDC_TEXT2, m_strPort);
 	DDX_Text(pDX, IDC_CALC_PORT, m_strPortCalc);
-	DDX_Text(pDX, IDC_UDP, m_strUDPPort);
-	DDX_Control(pDX, IDC_RADIO_BVH, m_radioBvh);
 	
-	DDX_Text(pDX, IDC_STATIC_PX, m_calcPx);
-	DDX_Text(pDX, IDC_STATIC_PY, m_calcPy);
-	DDX_Text(pDX, IDC_STATIC_PZ, m_calcPz);
-	
-	DDX_Text(pDX, IDC_STATIC_AX, m_calcAx);
-	DDX_Text(pDX, IDC_STATIC_AY, m_calcAy);
-	DDX_Text(pDX, IDC_STATIC_AZ, m_calcAz);
-	/*
-	DDX_Text(pDX, IDC_STATIC_GX, m_calcGx);
-	DDX_Text(pDX, IDC_STATIC_GY, m_calcGy);
-	DDX_Text(pDX, IDC_STATIC_GZ, m_calcGz);
-
-	DDX_Text(pDX, IDC_STATIC_QS, m_calcQs);
-	DDX_Text(pDX, IDC_STATIC_QX, m_calcQx);
-	DDX_Text(pDX, IDC_STATIC_QY, m_calcQy);
-	DDX_Text(pDX, IDC_STATIC_QZ, m_calcQz);
-	DDX_Text(pDX, IDC_STATIC_VX, m_calcVx);
-	DDX_Text(pDX, IDC_STATIC_VY, m_calcVy);
-	DDX_Text(pDX, IDC_STATIC_VZ, m_calcVz);
-
-	*/
 	DDX_Control(pDX, IDC_COMBO_SELECTION_BONE_INDEX, m_wndComBoxBone);
-	DDX_Text(pDX, IDC_STATIC_ANGLE_Z, m_bvhAngleZ);
+	
 }
 BEGIN_MESSAGE_MAP(Cdemo_MFCDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_BN_CLICKED(IDOK, &Cdemo_MFCDlg::OnBnClickedOk)
-	ON_BN_CLICKED(IDCANCEL, &Cdemo_MFCDlg::OnBnClickedCancel)
 	ON_BN_CLICKED(IDC_BUTTON_TCP_CONNECTION, &Cdemo_MFCDlg::OnBnClickedButtonTcpConnection)
-	ON_BN_CLICKED(IDC_BUTTON_UDP_CONNECTION, &Cdemo_MFCDlg::OnBnClickedButtonUdpConnection)
 	ON_CBN_SELCHANGE(IDC_COMBO_SELECTION_BONE_INDEX,
 		&Cdemo_MFCDlg::OnCbnSelchangeComboSelectionBoneIndex)
-	ON_BN_CLICKED(IDC_RADIO_BVH, &Cdemo_MFCDlg::OnBnClickedRadio)
-	ON_BN_CLICKED(IDC_RADIO_CALC, &Cdemo_MFCDlg::OnBnClickedRadio)
 	ON_MESSAGE(WM_UPDATE_MESSAGE, OnUpdateMessage)
-	ON_STN_CLICKED(IDC_STATIC_DISP_X, &Cdemo_MFCDlg::OnStnClickedStaticDispX)
 	ON_BN_CLICKED(IDC_BUTTON_TCP_CONNECTION_CALC, &Cdemo_MFCDlg::OnBnClickedButtonTcpConnectionCalc)
 END_MESSAGE_MAP()
 // Cdemo_MFCDlg message handlers
@@ -204,11 +150,8 @@ BOOL Cdemo_MFCDlg::OnInitDialog()
 	m_strIPAddress = L"127.0.0.1";//Default IP Address
 	m_strPort = L"7001";//Default Port
 	m_strPortCalc = L"7003";
-	m_strUDPPort = L"7001"; // Default UDP Port
-	m_radioBvh.SetCheck(BST_CHECKED);
 	GetDlgItem(IDC_BUTTON_TCP_CONNECTION)->SetWindowText(L"Connect TCP");
 	GetDlgItem(IDC_BUTTON_TCP_CONNECTION_CALC)->SetWindowText(L"Connect Calc");
-	GetDlgItem(IDC_BUTTON_UDP_CONNECTION)->SetWindowText(L"Connect UDP");
 	UpdateBvhDataShowUI();
 	UpdateData(FALSE);
 	return TRUE; // return TRUE unless you set the focus to a control
@@ -219,7 +162,7 @@ void __stdcall Cdemo_MFCDlg::bvhFrameDataReceived(void* customedObj, SOCKET_REF 
 	Cdemo_MFCDlg* pthis = (Cdemo_MFCDlg*)customedObj;
 	pthis->getBvhBoneInfo(sender, header, data);
 	pthis->showBvhBoneInfo();
-	//pthis->sendBvhBoneInfo();
+	pthis->sendBvhBoneInfo();
 }
 void __stdcall Cdemo_MFCDlg::CalcFrameDataReceive(void* customObje, SOCKET_REF sender, CalcDataHeader*
 	header, float* data)
@@ -278,9 +221,9 @@ void Cdemo_MFCDlg::getBvhBoneInfo(SOCKET_REF sender, BvhDataHeader* header, floa
 				boneData->dispX = NULL;
 				boneData->dispY = NULL;
 				boneData->dispZ = NULL;
-boneData->angX = data[dataIndex + 1];
-boneData->angY = data[dataIndex + 0];
-boneData->angZ = data[dataIndex + 2];
+				boneData->angX = data[dataIndex + 1];
+				boneData->angY = data[dataIndex + 0];
+				boneData->angZ = data[dataIndex + 2];
 			}
 		}
 	}
@@ -321,6 +264,12 @@ void Cdemo_MFCDlg::sendOscBuffer(char* buf, int len) {
 	}
 }
 void Cdemo_MFCDlg::sendBvhBoneInfo() {
+	if ((double)(std::time(nullptr) - lastBvhDataSent) < dataDelayS) {
+		return;
+	}
+	else {
+		lastBvhDataSent = std::time(nullptr);
+	}
 	const uint16_t addressSize = 256;
 	char addressBuf[addressSize];
 	int len;
@@ -374,10 +323,10 @@ void Cdemo_MFCDlg::getCalcBoneInfo(SOCKET_REF sender, CalcDataHeader* header, fl
 	}
 }
 void Cdemo_MFCDlg::sendCalcBoneInfo() {
-	if ((double) (std::time(nullptr) - lastDataSent) < dataDelayS) {
+	if ((double) (std::time(nullptr) - lastCalcDataSent) < dataDelayS) {
 		return;
 	} else {
-		lastDataSent = std::time(nullptr);
+		lastCalcDataSent = std::time(nullptr);
 	}
 	const uint16_t addressSize = 256;
 	char addressBuf[addressSize];
@@ -390,15 +339,12 @@ void Cdemo_MFCDlg::sendCalcBoneInfo() {
 		sprintf_s(addressBuf, addressSize, "/b/%d/p", boneIndex);
 		len = tosc_writeMessage(oscBufferCalc, OSC_BUFFER_SIZE, addressBuf, "fff", cur->calcPx, cur->calcPy, cur->calcPz);
 		sendOscBuffer(oscBufferCalc, len);
-		/*
 		sprintf_s(addressBuf, addressSize, "/b/%d/v", boneIndex);
 		len = tosc_writeMessage(oscBufferCalc, OSC_BUFFER_SIZE, addressBuf, "fff", cur->calcVx, cur->calcVy, cur->calcVz);
 		sendOscBuffer(oscBufferCalc, len);
-
 		sprintf_s(addressBuf, addressSize, "/b/%d/A", boneIndex);
 		len = tosc_writeMessage(oscBufferCalc, OSC_BUFFER_SIZE, addressBuf, "fff", cur->calcAx, cur->calcAy, cur->calcAz);
 		sendOscBuffer(oscBufferCalc, len);
-		*/
 	}
 }
 void Cdemo_MFCDlg::showCalcBoneInfo()
@@ -411,46 +357,19 @@ void Cdemo_MFCDlg::showCalcBoneInfo()
 	if (curSel == CB_ERR) return;
 	mocap_bone_t* cur = &curFrame[curSel];
 
-	int dataIndex = 0;
-	dataIndex = 16 * curSel;
-	//CString tmptmp;
-	//tmptmp.Format( L"%d\n", dataIndex );
-	//OutputDebugString( tmptmp );
-	CString tmpData;
-	tmpData.Format(L"%0.3f", cur->calcPx);
-	m_calcPx = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcPy);
-	m_calcPy = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcPz);
-	m_calcPz = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcVx);
-	m_calcVx = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcVy);
-	m_calcVy = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcVz);
-	m_calcVz = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcQs);
-	m_calcQs = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcQx);
-	m_calcQx = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcQy);
-	m_calcQy = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcQz);
-	m_calcQz = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcAx);
-	m_calcAx = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcAy);
-	m_calcAy = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcAz);
-	m_calcAz = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcGx);
-	m_calcGx = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcGy);
-	m_calcGy = tmpData;
-	tmpData.Format(L"%0.3f", cur->calcGz);
-	m_calcGz = tmpData;
-	PostMessage(WM_UPDATE_MESSAGE, 0, 0);//OK － UpdateDate
-
+	char strBuff[32];
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->calcPx);
+	GetDlgItem(IDC_STATIC_PX)->SetWindowText(A2W(strBuff));
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->calcPy);
+	GetDlgItem(IDC_STATIC_PY)->SetWindowText(A2W(strBuff));
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->calcPz);
+	GetDlgItem(IDC_STATIC_PZ)->SetWindowText(A2W(strBuff));
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->calcAx);
+	GetDlgItem(IDC_STATIC_AX)->SetWindowText(A2W(strBuff));
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->calcAy);
+	GetDlgItem(IDC_STATIC_AY)->SetWindowText(A2W(strBuff));
+	sprintf_s(strBuff, sizeof(strBuff), "%0.3f", cur->calcAz);
+	GetDlgItem(IDC_STATIC_AZ)->SetWindowText(A2W(strBuff));
 }
 void Cdemo_MFCDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
@@ -494,16 +413,7 @@ HCURSOR Cdemo_MFCDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
-void Cdemo_MFCDlg::OnBnClickedOk()
-{
-	//CDialogEx::OnOK();
-	fout.close();
-}
-void Cdemo_MFCDlg::OnBnClickedCancel()
-{
-	CDialogEx::OnCancel();
-	fout.close();
-}
+
 void Cdemo_MFCDlg::OnBnClickedButtonTcpConnection()
 {
 	UpdateData();
@@ -545,62 +455,12 @@ void Cdemo_MFCDlg::OnBnClickedButtonTcpConnection()
 		}
 	}
 }
-void Cdemo_MFCDlg::OnBnClickedButtonUdpConnection()
-{
-	UpdateData();
-	if (sockUDPRef)
-	{
-		// close socket
-		BRCloseSocket(sockUDPRef);
-		// reconnect
-		sockUDPRef = NULL;
-		// change the title of button
-		GetDlgItem(IDC_BUTTON_UDP_CONNECTION)->SetWindowText(L"Connect UDP");
-	}
-	else
-	{
-		USES_CONVERSION;
-		// get port number
-		char* UDPport = W2A(m_strUDPPort);
-		long nUDPPort = 0;
-		try
-		{
-			nUDPPort = atoi(UDPport);
-		}
-		catch (CException * e)
-		{
-			AfxMessageBox(L"UDPPort number error", MB_OK);
-			return;
-		}
-		// connect to remote server
-		sockUDPRef = BRStartUDPServiceAt(nUDPPort);
-		// if success, change the title of button
-		if (sockUDPRef)
-		{
-			GetDlgItem(IDC_BUTTON_UDP_CONNECTION)->SetWindowText(L"Disconnect UDP");
-		}
-		else
-		{
-			// if failed, show message
-			AfxMessageBox(A2W(BRGetLastErrorMessage()), MB_OK);
-		}
-	}
-}
+
 void Cdemo_MFCDlg::OnCbnSelchangeComboSelectionBoneIndex()
 {
 	UpdateData();
 }
-void Cdemo_MFCDlg::OnBnClickedRadio()
-{
-	if (m_radioBvh.GetCheck() == BST_CHECKED)
-	{
-		UpdateBvhDataShowUI();
-	}
-	else
-	{
-		UpdateCalcDataShowUI();
-	}
-}
+
 void Cdemo_MFCDlg::UpdateBvhDataShowUI()
 {
 	CString BoneID;
@@ -623,19 +483,6 @@ void Cdemo_MFCDlg::UpdateCalcDataShowUI()
 	}
 	m_wndComBoxBone.SetCurSel(0);
 }
-
-void Cdemo_MFCDlg::OnStnClickedStaticDispX()
-{
-	// TODO: Add your control notification handler code here
-}
-
-
-void Cdemo_MFCDlg::OnStnClickedStaticPx2()
-{
-	// TODO: Add your control notification handler code here
-}
-
-
 
 void Cdemo_MFCDlg::OnBnClickedButtonTcpConnectionCalc()
 {
